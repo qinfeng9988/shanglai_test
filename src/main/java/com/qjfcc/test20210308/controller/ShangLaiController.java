@@ -75,7 +75,7 @@ public class ShangLaiController {
             return BaseResponse.success(null);
         }
         LinkedList<GoodInfoResponse> list = s.getList();
-        for (int i = 1; i < s.getCount(); i++) {
+        for (int i = 2; i < s.getCount(); i++) {
             body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeInterval, i, token);
             requestEntity = HttpRequestEntity.builder()
                     .body(body)
