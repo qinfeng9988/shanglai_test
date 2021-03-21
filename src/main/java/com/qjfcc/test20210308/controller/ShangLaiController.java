@@ -111,11 +111,12 @@ public class ShangLaiController {
     }
 
     @GetMapping("download")
-    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String token, @RequestParam Integer timeInterval) {
+    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String token, @RequestParam Integer timeInterval,@RequestParam(required = false) Boolean retry) {
         SimpleDateFormat simpleDateFormat =  new SimpleDateFormat("yyyyMMdd");
         String date =  simpleDateFormat.format(new Date());
         String key = date + "~~"+timeInterval;
-        if(maps.containsKey(key)){
+        if(maps.containsKey(key) && (retry==null || !retry)){
+
             return BaseResponse.success(maps.get(key));
         }
 
