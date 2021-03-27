@@ -37,51 +37,49 @@ public class ShangLaiController {
     @PostMapping("start")
     public BaseResponse<Boolean> start(@RequestBody ShangLaiStartRequest request) {
         TimeIntervalEnum timeInterval = TimeIntervalEnum.convert(request.getTimeInterval());
-        request.getProductId().forEach(pid -> {
-            ThreadPoolUtil.execute(() -> {
-                SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                if (timeInterval != null && timeInterval.getStartTime() != null) {
-                    try {
-                        Date now = new Date();
-                        long startSecond = timeInterval.getStartTime().getTime();
-                        if (now.before(timeInterval.getStartTime())) {
-                            long nowSecond = now.getTime();
-                            System.out.println(simpleFormat.format(now) + ",已预约时间段：" + simpleFormat.format(timeInterval.getStartTime()) + "," + (startSecond - nowSecond) + "毫秒后开始运行");
-                            Thread.sleep(startSecond - nowSecond);
-                        }
-                    } catch (Exception ignored) {
+        request.getProductId().forEach(pid -> ThreadPoolUtil.execute(() -> {
+            SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            if (timeInterval != null && timeInterval.getStartTime() != null) {
+                try {
+                    Date now = new Date();
+                    long startSecond = timeInterval.getStartTime().getTime();
+                    if (now.before(timeInterval.getStartTime())) {
+                        long nowSecond = now.getTime();
+                        System.out.println(simpleFormat.format(now) + ",已预约["+pid+"]时间段：" + simpleFormat.format(timeInterval.getStartTime()) + "," + (startSecond - nowSecond) + "毫秒后开始运行");
+                        Thread.sleep(startSecond - nowSecond);
                     }
+                } catch (Exception ignored) {
                 }
-                System.out.println("抢购开始" + simpleFormat.format(new Date()));
-                for (int i = 0; i < 150; i++) {
-                    String body = String.format("{\"id\":%s,\"token\":\"" + request.getToken() + "\"}", pid);
-                    RestTemplate restTemplate = new RestTemplate();
-                    HttpHeaders header = new HttpHeaders();
-                    header.setContentType(MediaType.APPLICATION_JSON);
-                    header.setOrigin("http://pm.shanglai.art");
-                    header.add("Referer", "http://pm.shanglai.art/vue/");
-                    header.setAccept(Lists.newArrayList(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, MediaType.ALL));
-                    header.add("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.190 Mobile Safari/537.36");
-                    HttpEntity<String> httpEntity = new HttpEntity<>(body, header);
+            }
+            System.out.println("抢购开始" + simpleFormat.format(new Date()));
+            for (int i = 0; i < 150; i++) {
+                String body = String.format("{\"id\":%s,\"token\":\"" + request.getToken() + "\"}", pid);
+                RestTemplate restTemplate = new RestTemplate();
+                HttpHeaders header = new HttpHeaders();
+                header.setContentType(MediaType.APPLICATION_JSON);
+                header.setOrigin("http://pm.shanglai.art");
+                header.add("Referer", "http://pm.shanglai.art/vue/");
+                header.setAccept(Lists.newArrayList(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, MediaType.ALL));
+                header.add("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.190 Mobile Safari/537.36");
+                HttpEntity<String> httpEntity = new HttpEntity<>(body, header);
 
-                    try {
-                        String s = restTemplate.postForObject("http://pm.shanglai.art/index/auction_goods/buy_auction_goods", httpEntity, String.class);
-                        if (StringUtils.isNotBlank(s)) {
-                            if (s.contains("成功")) {
+                try {
+                    String s = restTemplate.postForObject("http://pm.shanglai.art/index/auction_goods/buy_auction_goods", httpEntity, String.class);
+                    if (StringUtils.isNotBlank(s)) {
+                        if (s.contains("成功")) {
 //                                hasProduct.set(true);
-                                System.out.println("thread-商品-" + pid + "抢购成功了");
-                                break;
-                            } else {
-                                System.out.println(simpleFormat.format(new Date()) + " " + s + pid);
-                            }
+                            System.out.println("thread-商品-" + pid + "抢购成功了");
+                            break;
+                        } else {
+                            System.out.println(simpleFormat.format(new Date()) + " " + s + pid);
                         }
-                    } catch (Exception ignored) {
-
                     }
+                } catch (Exception ignored) {
+
                 }
-                System.out.println("抢购结束" + simpleFormat.format(new Date())+","+ pid);
-            });
-        });
+            }
+            System.out.println("抢购结束" + simpleFormat.format(new Date())+","+ pid);
+        }));
 
         return BaseResponse.success();
     }
@@ -118,8 +116,8 @@ public class ShangLaiController {
         if(maps.containsKey(key)){
             return BaseResponse.success(maps.get(key));
         }
-
-        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeInterval, token);
+        TimeIntervalEnum timeIntervalEnum = TimeIntervalEnum.convert(timeInterval);
+        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeIntervalEnum.getTid(), token);
         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                 .body(body)
                 .origin("http://pm.shanglai.art")
@@ -134,7 +132,7 @@ public class ShangLaiController {
         }
         LinkedList<GoodInfoResponse> list = s.getList();
         for (int i = 2; i < s.getCount(); i++) {
-            body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeInterval, i, token);
+            body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeIntervalEnum.getTid(), i, token);
             requestEntity = HttpRequestEntity.builder()
                     .body(body)
                     .origin("http://pm.shanglai.art")
@@ -213,7 +211,6 @@ public class ShangLaiController {
             System.out.println("抢购结束" + simpleFormat.format(new Date()));
         });
     }
-
 
 }
 

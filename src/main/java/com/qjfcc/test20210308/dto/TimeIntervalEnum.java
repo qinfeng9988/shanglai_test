@@ -7,20 +7,29 @@ import java.util.Arrays;
 import java.util.Date;
 
 public enum TimeIntervalEnum {
-    MORNING(1, "早上"),
-    AFTERNOON(2, "中午"),
-    EVENING(3, "晚上"),
+    MORNING(1, "早上", 1),
+    AFTERNOON(2, "中午", 2),
+    EVENING(3, "晚上", 18),
     ;
     private Integer code;
     private String message;
+    /**
+     * 场次Id
+     */
+    private Integer tid;
 
-    TimeIntervalEnum(Integer code, String message) {
+    TimeIntervalEnum(Integer code, String message, Integer tid) {
         this.code = code;
         this.message = message;
+        this.tid = tid;
     }
 
     public Integer getCode() {
         return code;
+    }
+
+    public Integer getTid() {
+        return tid;
     }
 
     public String getMessage() {
