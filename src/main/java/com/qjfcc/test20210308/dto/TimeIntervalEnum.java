@@ -7,16 +7,27 @@ import java.util.Arrays;
 import java.util.Date;
 
 public enum TimeIntervalEnum {
-    MORNING(1, "早上"),
-    AFTERNOON(2, "中午"),
-    EVENING(3, "晚上"),
+    MORNING(1, "早上", 1, "10:29:45", "10:19:45"),
+    AFTERNOON(2, "中午", 2, "14:29:45", "14:19:45"),
+    EVENING(3, "晚上", 18, "18:29:45", "18:19:45"),
     ;
     private Integer code;
     private String message;
+    private String time;
+    private String vipTime;
 
-    TimeIntervalEnum(Integer code, String message) {
+    public Integer getTid() {
+        return tid;
+    }
+
+    private Integer tid;
+
+    TimeIntervalEnum(Integer code, String message, Integer tid, String time, String vipTime) {
         this.code = code;
         this.message = message;
+        this.tid = tid;
+        this.time = time;
+        this.vipTime = vipTime;
     }
 
     public Integer getCode() {
@@ -28,21 +39,19 @@ public enum TimeIntervalEnum {
     }
 
     public Date getStartTime() {
+        return getTime(false);
+    }
+
+    public Date getVipStartTime() {
+        return getTime(true);
+    }
+
+    private Date getTime(boolean isVip) {
         SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
         try {
             LocalDate localDate = LocalDate.now();
-            String dateString = localDate.getYear() + "-" + localDate.getMonthValue() + "-" + localDate.getDayOfMonth();
-            switch (this.code) {
-                case 1:
-                    dateString += " 10:29:45";
-                    break;
-                case 2:
-                    dateString += " 14:29:45";
-                    break;
-                default:
-                    dateString += " 18:29:45";
-                    break;
-            }
+            String dateString = localDate.getYear() + "-" + localDate.getMonthValue() + "-" + localDate.getDayOfMonth() + " ";
+            dateString += isVip ? this.vipTime : this.time;
             return simpleFormat.parse(dateString);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -51,6 +60,6 @@ public enum TimeIntervalEnum {
     }
 
     public static TimeIntervalEnum convert(Integer code) {
-        return Arrays.stream(values()).filter(t -> t.getCode().equals(code)).findFirst().orElse(null);
+        return Arrays.stream(values()).filter(t -> t.getCode().equals(code)).findFirst().orElse(TimeIntervalEnum.MORNING);
     }
 }

@@ -10,7 +10,6 @@ import com.qjfcc.test20210308.dto.TimeIntervalEnum;
 import com.qjfcc.test20210308.dto.request.ShangLaiStartRequest;
 import com.qjfcc.test20210308.response.GoodInfoResponse;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -32,14 +31,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequestMapping("/shanglai/")
 public class ShangLaiController {
 
-    private Map<String,LinkedList<GoodInfoResponse>> maps = new HashMap<>();
+    private Map<String, LinkedList<GoodInfoResponse>> maps = new HashMap<>();
 
     @PostMapping("start")
     public BaseResponse<Boolean> start(@RequestBody ShangLaiStartRequest request) {
         TimeIntervalEnum timeInterval = TimeIntervalEnum.convert(request.getTimeInterval());
         request.getProductId().forEach(pid -> {
             ThreadPoolUtil.execute(() -> {
-                SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
                 if (timeInterval != null && timeInterval.getStartTime() != null) {
                     try {
                         Date now = new Date();
@@ -79,7 +78,7 @@ public class ShangLaiController {
 
                     }
                 }
-                System.out.println("抢购结束" + simpleFormat.format(new Date())+","+ pid);
+                System.out.println("抢购结束" + simpleFormat.format(new Date()) + "," + pid);
             });
         });
 
@@ -104,23 +103,49 @@ public class ShangLaiController {
             if (end > productIds.size()) {
                 end = productIds.size();
             }
-            splitStart(productIds.subList(start, end), request.getToken(), timeInterval);
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval,false);
+        }
+
+        return BaseResponse.success();
+    }
+
+    @PostMapping("vip/start")
+    public BaseResponse<Boolean> vipStart(@RequestBody ShangLaiStartRequest request) {
+        int threadCount = Optional.ofNullable(request.getThreadCount()).orElse(10);
+        int count = Math.min(request.getProductId().size(), threadCount);
+        int len = request.getProductId().size() / count;
+        List<Integer> productIds = request.getProductId();
+        TimeIntervalEnum timeInterval = TimeIntervalEnum.convert(request.getTimeInterval());
+
+        int end, start;
+        for (int i = 0; i < count; i++) {
+            start = i * len;
+            end = start + len;
+            if (start == end) {
+                break;
+            }
+            if (end > productIds.size()) {
+                end = productIds.size();
+            }
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval,true);
         }
 
         return BaseResponse.success();
     }
 
     @GetMapping("download")
-    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String token, @RequestParam Integer timeInterval,@RequestParam(required = false) Boolean retry) {
-        SimpleDateFormat simpleDateFormat =  new SimpleDateFormat("yyyyMMdd");
-        String date =  simpleDateFormat.format(new Date());
-        String key = date + "~~"+timeInterval;
-        if(maps.containsKey(key) && (retry==null || !retry)){
+    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String token, @RequestParam Integer timeInterval, @RequestParam(required = false) Boolean retry) {
 
+        TimeIntervalEnum timeIntervalType = Optional.ofNullable(TimeIntervalEnum.convert(timeInterval)).orElse(TimeIntervalEnum.MORNING);
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd");
+        String date = simpleDateFormat.format(new Date());
+        String key = date + "~~" + timeIntervalType.getCode();
+        if (maps.containsKey(key) && (retry == null || !retry)) {
             return BaseResponse.success(maps.get(key));
         }
 
-        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeInterval, token);
+        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeIntervalType.getTid(), token);
         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                 .body(body)
                 .origin("http://pm.shanglai.art")
@@ -135,7 +160,7 @@ public class ShangLaiController {
         }
         LinkedList<GoodInfoResponse> list = s.getList();
         for (int i = 2; i < s.getCount(); i++) {
-            body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeInterval, i, token);
+            body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeIntervalType.getTid(), i, token);
             requestEntity = HttpRequestEntity.builder()
                     .body(body)
                     .origin("http://pm.shanglai.art")
@@ -150,20 +175,22 @@ public class ShangLaiController {
             list.addAll(s.getList());
         }
         list.sort((o1, o2) -> o2.getGoods_price().compareTo(o1.getGoods_price()));
-        maps.put(key,list);
+        maps.put(key, list);
         return BaseResponse.success(list);
     }
 
-    private void splitStart(List<Integer> productIds, String token, TimeIntervalEnum timeInterval) {
+    private void splitStart(List<Integer> productIds, String token, TimeIntervalEnum timeInterval,boolean isVip) {
         ThreadPoolUtil.execute(() -> {
-            SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            if (timeInterval != null && timeInterval.getStartTime() != null) {
+            SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+            if (timeInterval != null) {
                 try {
+                    Date startTime = isVip ? timeInterval.getVipStartTime() : timeInterval.getStartTime();
+
                     Date now = new Date();
-                    long startSecond = timeInterval.getStartTime().getTime();
-                    if (now.before(timeInterval.getStartTime())) {
+                    long startSecond = startTime.getTime();
+                    if (now.before(startTime)) {
                         long nowSecond = now.getTime();
-                        System.out.println(simpleFormat.format(now) + ",已预约时间段：" + simpleFormat.format(timeInterval.getStartTime()) + "," + (startSecond - nowSecond) + "毫秒后开始运行");
+                        System.out.println(simpleFormat.format(now) + ",已预约时间段：" + simpleFormat.format(startTime) + "," + (startSecond - nowSecond) + "毫秒后开始运行");
                         Thread.sleep(startSecond - nowSecond);
                     }
 
@@ -175,7 +202,7 @@ public class ShangLaiController {
             System.out.println("抢购开始" + simpleFormat.format(new Date()));
             Thread.currentThread().setName("thread-商品-[" + StringUtils.join(productIds, ",") + "]");
             AtomicBoolean hasProduct = new AtomicBoolean(false);
-            for (int i = 0; i < 150; i++) {
+            for (int i = 0; i < 300; i++) {
                 productIds.forEach(productId -> {
                     if (hasProduct.get()) {
                         System.out.println("已拍到产品，无需重拍");

@@ -16,4 +16,5 @@ public class GoodInfoResponse implements Serializable {
     private Double goods_price;
     private String w_num;
     private String status;
+    private String spec;
 }
