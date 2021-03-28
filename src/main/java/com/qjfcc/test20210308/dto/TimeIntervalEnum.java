@@ -15,11 +15,6 @@ public enum TimeIntervalEnum {
     private String message;
     private String time;
     private String vipTime;
-
-    public Integer getTid() {
-        return tid;
-    }
-
     private Integer tid;
 
     TimeIntervalEnum(Integer code, String message, Integer tid, String time, String vipTime) {
@@ -32,6 +27,10 @@ public enum TimeIntervalEnum {
 
     public Integer getCode() {
         return code;
+    }
+
+    public Integer getTid() {
+        return tid;
     }
 
     public String getMessage() {

@@ -49,8 +49,11 @@ public class ShangLaiController {
                             Thread.sleep(startSecond - nowSecond);
                         }
                     } catch (Exception ignored) {
+
                     }
+
                 }
+
                 System.out.println("抢购开始" + simpleFormat.format(new Date()));
                 for (int i = 0; i < 150; i++) {
                     String body = String.format("{\"id\":%s,\"token\":\"" + request.getToken() + "\"}", pid);
@@ -77,11 +80,10 @@ public class ShangLaiController {
                     } catch (Exception ignored) {
 
                     }
+                    System.out.println("抢购结束" + simpleFormat.format(new Date()) + "," + pid);
                 }
-                System.out.println("抢购结束" + simpleFormat.format(new Date()) + "," + pid);
             });
         });
-
         return BaseResponse.success();
     }
 
@@ -103,7 +105,7 @@ public class ShangLaiController {
             if (end > productIds.size()) {
                 end = productIds.size();
             }
-            splitStart(productIds.subList(start, end), request.getToken(), timeInterval,false);
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, false);
         }
 
         return BaseResponse.success();
@@ -127,14 +129,15 @@ public class ShangLaiController {
             if (end > productIds.size()) {
                 end = productIds.size();
             }
-            splitStart(productIds.subList(start, end), request.getToken(), timeInterval,true);
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, true);
         }
 
         return BaseResponse.success();
     }
 
     @GetMapping("download")
-    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String token, @RequestParam Integer timeInterval, @RequestParam(required = false) Boolean retry) {
+    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String
+                                                                       token, @RequestParam Integer timeInterval, @RequestParam(required = false) Boolean retry) {
 
         TimeIntervalEnum timeIntervalType = Optional.ofNullable(TimeIntervalEnum.convert(timeInterval)).orElse(TimeIntervalEnum.MORNING);
 
@@ -145,7 +148,8 @@ public class ShangLaiController {
             return BaseResponse.success(maps.get(key));
         }
 
-        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeIntervalType.getTid(), token);
+        TimeIntervalEnum timeIntervalEnum = TimeIntervalEnum.convert(timeInterval);
+        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeIntervalEnum.getTid(), token);
         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                 .body(body)
                 .origin("http://pm.shanglai.art")
@@ -160,8 +164,8 @@ public class ShangLaiController {
         }
         LinkedList<GoodInfoResponse> list = s.getList();
         for (int i = 2; i < s.getCount(); i++) {
-            body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeIntervalType.getTid(), i, token);
-            requestEntity = HttpRequestEntity.builder()
+                    body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeIntervalType.getTid(), i, token);
+                    requestEntity = HttpRequestEntity.builder()
                     .body(body)
                     .origin("http://pm.shanglai.art")
                     .referer("http://pm.shanglai.art/vue/")
@@ -179,7 +183,8 @@ public class ShangLaiController {
         return BaseResponse.success(list);
     }
 
-    private void splitStart(List<Integer> productIds, String token, TimeIntervalEnum timeInterval,boolean isVip) {
+    private void splitStart(List<Integer> productIds, String token, TimeIntervalEnum timeInterval,
+                            boolean isVip) {
         ThreadPoolUtil.execute(() -> {
             SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
             if (timeInterval != null) {
@@ -241,7 +246,6 @@ public class ShangLaiController {
             System.out.println("抢购结束" + simpleFormat.format(new Date()));
         });
     }
-
 
 }
 
