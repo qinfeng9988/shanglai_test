@@ -14,7 +14,6 @@ import java.io.Serializable;
 public class GoodInfoResponse implements Serializable {
     private Integer id;
     private Double goods_price;
-    private String w_num;
+    private String goods_name;
     private String status;
-    private String spec;
 }

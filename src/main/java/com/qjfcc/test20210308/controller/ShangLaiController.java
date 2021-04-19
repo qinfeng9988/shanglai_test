@@ -1,12 +1,11 @@
 package com.qjfcc.test20210308.controller;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.google.common.collect.Lists;
 import com.qjfcc.test20210308.common.HttpClientUtil;
 import com.qjfcc.test20210308.common.ThreadPoolUtil;
-import com.qjfcc.test20210308.dto.BaseResponse;
-import com.qjfcc.test20210308.dto.HttpRequestEntity;
-import com.qjfcc.test20210308.dto.ShangLaiBaseResponse;
-import com.qjfcc.test20210308.dto.TimeIntervalEnum;
+import com.qjfcc.test20210308.dto.*;
 import com.qjfcc.test20210308.dto.request.ShangLaiStartRequest;
 import com.qjfcc.test20210308.response.GoodInfoResponse;
 import org.apache.commons.lang3.StringUtils;
@@ -23,6 +22,7 @@ import java.util.*;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * @Auther: qinjiangfeng
@@ -33,8 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequestMapping("/shanglai/")
 public class ShangLaiController {
 
-    private Map<String, LinkedList<GoodInfoResponse>> maps = new HashMap<>();
-
+    private Map<String, List<GoodInfoResponse>> maps = new HashMap<>();
 
     @PostMapping("concurrent/start")
     public BaseResponse<Boolean> start(@RequestBody ShangLaiStartRequest request) {
@@ -199,7 +198,7 @@ public class ShangLaiController {
     }
 
     @GetMapping("download")
-    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String token, @RequestParam Integer timeInterval, @RequestParam(required = false) Boolean retry) {
+    public BaseResponse<List<GoodInfoResponse>> download(@RequestParam String token, @RequestParam Integer timeInterval, @RequestParam(required = false) Boolean retry) {
 
         TimeIntervalEnum timeIntervalType = Optional.ofNullable(TimeIntervalEnum.convert(timeInterval)).orElse(TimeIntervalEnum.MORNING);
 
@@ -211,34 +210,37 @@ public class ShangLaiController {
         }
 
         TimeIntervalEnum timeIntervalEnum = TimeIntervalEnum.convert(timeInterval);
-        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeIntervalEnum.getTid(), token);
+        //String body = String.format("{\"tid\":%s,\"pageNo\":0,\"token\":\"%s\",\"pagesize\":100,\"visit\":\"1b\"}", timeIntervalEnum.getTid(), token);
+        //tid=
+        String body = String.format("tid=%s&pageNo=1&pageSize=10&visit=lb&token=%s", timeIntervalEnum.getTid(), token);
+        String url = "http://pm.shanglai.art/index/fg/goods/goodsKillList?" + body;
         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                 .body(body)
                 .origin("http://pm.shanglai.art")
                 .referer("http://pm.shanglai.art/vue/")
-                .url("http://pm.shanglai.art/index/auction_goods/auction_goods_list")
+                .url(url)
                 .build();
-        ShangLaiBaseResponse<LinkedList<GoodInfoResponse>> s = HttpClientUtil.request(requestEntity, new ParameterizedTypeReference<ShangLaiBaseResponse<LinkedList<GoodInfoResponse>>>() {
-        });
 
-        if (CollectionUtils.isEmpty(s.getList()) || s.getCount() < 1) {
+
+        ShangLaiBaseResponse<QueryListPageResponse> s =  HttpClientUtil.requestV2(requestEntity,new TypeReference<ShangLaiBaseResponse<QueryListPageResponse>>(){});
+        QueryListPageResponse queryListPageResponse =  s.getResult();
+        if (s.getResult() == null || CollectionUtils.isEmpty(queryListPageResponse.getGoodsList()) || queryListPageResponse.getPageController().getTotalPages() < 1) {
             return BaseResponse.success(null);
         }
-        LinkedList<GoodInfoResponse> list = s.getList();
-        for (int i = 2; i < s.getCount(); i++) {
-            body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeIntervalType.getTid(), i, token);
+        List<GoodInfoResponse> list = queryListPageResponse.getGoodsList();
+        for (int i = 2; i < s.getResult().getPageController().getTotalPages(); i++) {
+            body = String.format("tid=%s&pageNo=1&pageSize=10&visit=lb&token=%s", timeIntervalEnum.getTid(), token);
             requestEntity = HttpRequestEntity.builder()
                     .body(body)
                     .origin("http://pm.shanglai.art")
                     .referer("http://pm.shanglai.art/vue/")
-                    .url("http://pm.shanglai.art/index/auction_goods/auction_goods_list")
+                    .url(url)
                     .build();
-            s = HttpClientUtil.request(requestEntity, new ParameterizedTypeReference<ShangLaiBaseResponse<LinkedList<GoodInfoResponse>>>() {
-            });
+            s = HttpClientUtil.requestV2(requestEntity, new TypeReference<ShangLaiBaseResponse<QueryListPageResponse>>(){});
             if (CollectionUtils.isEmpty(list)) {
                 break;
             }
-            list.addAll(s.getList());
+            list.addAll(s.getResult().getGoodsList());
         }
         list.sort((o1, o2) -> o2.getGoods_price().compareTo(o1.getGoods_price()));
         maps.put(key, list);
@@ -269,22 +271,21 @@ public class ShangLaiController {
             System.out.println("抢购开始" + simpleFormat.format(new Date()));
             Thread.currentThread().setName("thread-商品-[" + StringUtils.join(productIds, ",") + "]");
             AtomicBoolean hasProduct = new AtomicBoolean(false);
-            for (int i = 0; i < 300; i++) {
+            for (int i = 0; i < 150; i++) {
                 productIds.forEach(productId -> {
                     if (hasProduct.get()) {
                         System.out.println("已拍到产品，无需重拍");
                         return;
                     }
-                    String body = String.format("{\"id\":%s,\"token\":\"" + token + "\"}", productId);
-
+                    String body = String.format("ag_id=%s&token=%s&visit=%s&tid=%s",productId, token,timeInterval.getVisit(),timeInterval.getTid());
                     try {
                         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                                 .body(body)
                                 .origin("http://pm.shanglai.art")
                                 .referer("http://pm.shanglai.art/vue/")
-                                .url("http://pm.shanglai.art/index/auction_goods/buy_auction_goods")
+                                .url("http://pm.shanglai.art/index/fg/goods/goodsKillOrder")
                                 .build();
-                        String s = HttpClientUtil.request(requestEntity, new ParameterizedTypeReference<String>() {
+                        String s = HttpClientUtil.requestV2(requestEntity, new TypeReference<String>() {
                         });
                         if (StringUtils.isNotBlank(s)) {
                             if (s.contains("成功")) {
