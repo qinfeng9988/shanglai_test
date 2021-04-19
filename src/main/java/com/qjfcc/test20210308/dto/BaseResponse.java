@@ -4,11 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.core.ParameterizedTypeReference;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @Auther: qinjiangfeng
@@ -26,11 +23,15 @@ public class BaseResponse<T> implements Serializable {
     private T list;
 
     public static BaseResponse<Boolean> success() {
-        return new BaseResponse<Boolean>(0, "ok", true,null);
+        return new BaseResponse<Boolean>(0, "ok", true, null);
+    }
+
+    public static BaseResponse<Boolean> error() {
+        return new BaseResponse<Boolean>(999, "fail", true, null);
     }
 
     public static <T> BaseResponse<T> success(T data) {
-        return new BaseResponse<T>(0, "ok", data,null);
+        return new BaseResponse<T>(0, "ok", data, null);
     }
 
 }
