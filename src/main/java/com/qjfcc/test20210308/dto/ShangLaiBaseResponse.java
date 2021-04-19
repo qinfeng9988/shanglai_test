@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class ShangLaiBaseResponse<T> {
     private Integer status;
     private String message;
-    private T data;
+    private T result;
     private T list;
     private Integer count;
 

@@ -3,10 +3,7 @@ package com.qjfcc.test20210308.controller;
 import com.google.common.collect.Lists;
 import com.qjfcc.test20210308.common.HttpClientUtil;
 import com.qjfcc.test20210308.common.ThreadPoolUtil;
-import com.qjfcc.test20210308.dto.BaseResponse;
-import com.qjfcc.test20210308.dto.HttpRequestEntity;
-import com.qjfcc.test20210308.dto.ShangLaiBaseResponse;
-import com.qjfcc.test20210308.dto.TimeIntervalEnum;
+import com.qjfcc.test20210308.dto.*;
 import com.qjfcc.test20210308.dto.request.ShangLaiStartRequest;
 import com.qjfcc.test20210308.response.GoodInfoResponse;
 import org.apache.commons.lang3.StringUtils;
@@ -31,13 +28,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequestMapping("/shanglai/")
 public class ShangLaiController {
 
-    private Map<String, LinkedList<GoodInfoResponse>> maps = new HashMap<>();
+    private Map<String, List<GoodInfoResponse>> maps = new HashMap<>();
 
     @PostMapping("start")
     public BaseResponse<Boolean> start(@RequestBody ShangLaiStartRequest request) {
         TimeIntervalEnum timeInterval = TimeIntervalEnum.convert(request.getTimeInterval());
         request.getProductId().forEach(pid -> {
             ThreadPoolUtil.execute(() -> {
+                String threadName = String.format("thread-%s", pid);
+                Thread.currentThread().setName(threadName);
                 SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
                 if (timeInterval != null && timeInterval.getStartTime() != null) {
                     try {
@@ -45,7 +44,7 @@ public class ShangLaiController {
                         long startSecond = timeInterval.getStartTime().getTime();
                         if (now.before(timeInterval.getStartTime())) {
                             long nowSecond = now.getTime();
-                            System.out.println(simpleFormat.format(now) + ",已预约时间段：" + simpleFormat.format(timeInterval.getStartTime()) + "," + (startSecond - nowSecond) + "毫秒后开始运行");
+                            System.out.println("[" + threadName + "] " + simpleFormat.format(now) + ",已预约时间段：" + simpleFormat.format(timeInterval.getStartTime()) + "," + (startSecond - nowSecond) + "毫秒后开始运行");
                             Thread.sleep(startSecond - nowSecond);
                         }
                     } catch (Exception ignored) {
@@ -54,7 +53,7 @@ public class ShangLaiController {
 
                 }
 
-                System.out.println("抢购开始" + simpleFormat.format(new Date()));
+                System.out.println("[" + threadName + "] " + "抢购开始" + simpleFormat.format(new Date()));
                 for (int i = 0; i < 150; i++) {
                     String body = String.format("{\"id\":%s,\"token\":\"" + request.getToken() + "\"}", pid);
                     RestTemplate restTemplate = new RestTemplate();
@@ -71,17 +70,17 @@ public class ShangLaiController {
                         if (StringUtils.isNotBlank(s)) {
                             if (s.contains("成功")) {
 //                                hasProduct.set(true);
-                                System.out.println("thread-商品-" + pid + "抢购成功了");
+                                System.out.println("[" + threadName + "]" + " 抢购成功了");
                                 break;
                             } else {
-                                System.out.println(simpleFormat.format(new Date()) + " " + s + pid);
+                                System.out.println("[" + threadName + "] " + simpleFormat.format(new Date()) + " " + s + pid);
                             }
                         }
                     } catch (Exception ignored) {
 
                     }
-                    System.out.println("抢购结束" + simpleFormat.format(new Date()) + "," + pid);
                 }
+                System.out.println("[" + threadName + "]" + "抢购结束" + simpleFormat.format(new Date()));
             });
         });
         return BaseResponse.success();
@@ -136,7 +135,7 @@ public class ShangLaiController {
     }
 
     @GetMapping("download")
-    public BaseResponse<LinkedList<GoodInfoResponse>> download(@RequestParam String
+    public BaseResponse<List<GoodInfoResponse>> download(@RequestParam String
                                                                        token, @RequestParam Integer timeInterval, @RequestParam(required = false) Boolean retry) {
 
         TimeIntervalEnum timeIntervalType = Optional.ofNullable(TimeIntervalEnum.convert(timeInterval)).orElse(TimeIntervalEnum.MORNING);
@@ -149,34 +148,37 @@ public class ShangLaiController {
         }
 
         TimeIntervalEnum timeIntervalEnum = TimeIntervalEnum.convert(timeInterval);
-        String body = String.format("{\"tid\":%s,\"page\":0,\"token\":\"%s\"}", timeIntervalEnum.getTid(), token);
+        //String body = String.format("{\"tid\":%s,\"pageNo\":0,\"token\":\"%s\",\"pagesize\":100,\"visit\":\"1b\"}", timeIntervalEnum.getTid(), token);
+        //tid=
+        String body = String.format("tid=%s&pageNo=1&pageSize=10&visit=lb&token=%s", timeIntervalEnum.getTid(), token);
+        String url = "http://pm.shanglai.art/index/fg/goods/goodsKillList?"+ body;
         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                 .body(body)
                 .origin("http://pm.shanglai.art")
                 .referer("http://pm.shanglai.art/vue/")
-                .url("http://pm.shanglai.art/index/auction_goods/auction_goods_list")
+                .url(url)
                 .build();
-        ShangLaiBaseResponse<LinkedList<GoodInfoResponse>> s = HttpClientUtil.request(requestEntity, new ParameterizedTypeReference<ShangLaiBaseResponse<LinkedList<GoodInfoResponse>>>() {
+        ShangLaiBaseResponse<QueryListPageResponse> s = HttpClientUtil.request(requestEntity, new ParameterizedTypeReference<ShangLaiBaseResponse<QueryListPageResponse>>() {
         });
 
-        if (CollectionUtils.isEmpty(s.getList()) || s.getCount() < 1) {
+        if (s.getResult()==null || CollectionUtils.isEmpty(s.getResult().getGoodsList()) || s.getResult().getPageController().getTotalPages() < 1) {
             return BaseResponse.success(null);
         }
-        LinkedList<GoodInfoResponse> list = s.getList();
+        List<GoodInfoResponse> list = s.getResult().getGoodsList();
         for (int i = 2; i < s.getCount(); i++) {
-                    body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeIntervalType.getTid(), i, token);
-                    requestEntity = HttpRequestEntity.builder()
+            body = String.format("{\"tid\":%s,\"page\":%s,\"token\":\"%s\"}", timeIntervalType.getTid(), i, token);
+            requestEntity = HttpRequestEntity.builder()
                     .body(body)
                     .origin("http://pm.shanglai.art")
                     .referer("http://pm.shanglai.art/vue/")
                     .url("http://pm.shanglai.art/index/auction_goods/auction_goods_list")
                     .build();
-            s = HttpClientUtil.request(requestEntity, new ParameterizedTypeReference<ShangLaiBaseResponse<LinkedList<GoodInfoResponse>>>() {
+            s = HttpClientUtil.request(requestEntity, new ParameterizedTypeReference<ShangLaiBaseResponse<QueryListPageResponse>>() {
             });
             if (CollectionUtils.isEmpty(list)) {
                 break;
             }
-            list.addAll(s.getList());
+            list.addAll(s.getResult().getGoodsList());
         }
         list.sort((o1, o2) -> o2.getGoods_price().compareTo(o1.getGoods_price()));
         maps.put(key, list);

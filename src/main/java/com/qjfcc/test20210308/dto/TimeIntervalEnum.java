@@ -7,9 +7,9 @@ import java.util.Arrays;
 import java.util.Date;
 
 public enum TimeIntervalEnum {
-    MORNING(1, "早上", 1, "10:29:45", "10:19:45"),
-    AFTERNOON(2, "中午", 2, "14:29:45", "14:19:45"),
-    EVENING(3, "晚上", 18, "18:29:45", "18:19:45"),
+    MORNING(1, "早上", 1, "10:29:30", "10:19:52"),
+    AFTERNOON(2, "中午", 2, "14:29:30", "14:19:52"),
+    EVENING(3, "晚上", 18, "18:29:30", "18:19:52"),
     ;
     private Integer code;
     private String message;
@@ -59,6 +59,6 @@ public enum TimeIntervalEnum {
     }
 
     public static TimeIntervalEnum convert(Integer code) {
-        return Arrays.stream(values()).filter(t -> t.getCode().equals(code)).findFirst().orElse(TimeIntervalEnum.MORNING);
+        return Arrays.stream(values()).filter(t -> t.getCode().equals(code)).findFirst().orElse(null);
     }
 }
