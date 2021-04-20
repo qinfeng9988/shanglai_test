@@ -1,4 +1,4 @@
-package com.qjfcc.test20210308.response;
+package com.qjfcc.test20210308.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
