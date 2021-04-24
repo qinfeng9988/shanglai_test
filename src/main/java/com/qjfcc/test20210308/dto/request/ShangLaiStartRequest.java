@@ -19,4 +19,5 @@ public class ShangLaiStartRequest {
     private String token;
     private Integer threadCount;
     private Integer timeInterval;
+    private String name;
 }

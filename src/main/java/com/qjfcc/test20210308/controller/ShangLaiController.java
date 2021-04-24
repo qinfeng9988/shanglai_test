@@ -22,7 +22,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * @Auther: qinjiangfeng
+ * @Author: qinjiangfeng
  * @Date: 2021/3/8 10:49
  * @Description:
  */
@@ -30,8 +30,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequestMapping("/shanglai/")
 public class ShangLaiController {
 
+    private static final int count = 300;
+
     private Map<String, List<GoodInfoResponse>> maps = new HashMap<>();
 
+    /**
+     * 并行抢拍
+     * @param request
+     * @return
+     */
     @PostMapping("concurrent/start")
     public BaseResponse<Boolean> start(@RequestBody ShangLaiStartRequest request) {
         if (CollectionUtils.isEmpty(request.getProductId())) {
@@ -64,7 +71,7 @@ public class ShangLaiController {
                 AtomicBoolean hasProduct = new AtomicBoolean(false);
 
                 System.out.println("抢购开始" + simpleFormat.format(new Date()) + ",[" + pid + "]");
-                for (int i = 0; i < 150; i++) {
+                for (int i = 0; i < count; i++) {
                     try {
                         cyclicBarrierStart.await();
                     } catch (Exception ignored) {
@@ -108,6 +115,11 @@ public class ShangLaiController {
         return BaseResponse.success();
     }
 
+    /**
+     * 并发抢拍
+     * @param request
+     * @return
+     */
     @PostMapping("start2")
     public BaseResponse<Boolean> start2(@RequestBody ShangLaiStartRequest request) {
         int threadCount = Optional.ofNullable(request.getThreadCount()).orElse(10);
@@ -126,7 +138,7 @@ public class ShangLaiController {
             if (end > productIds.size()) {
                 end = productIds.size();
             }
-            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, false);
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, false, request.getName());
         }
 
         return BaseResponse.success();
@@ -134,11 +146,7 @@ public class ShangLaiController {
 
     @PostMapping("start3")
     public BaseResponse<Boolean> start3(@RequestBody ShangLaiStartRequest request) {
-        //int threadCount = Optional.ofNullable(request.getThreadCount()).orElse(10);
         int threadCount = 10;
-        int count = Math.min(request.getProductId().size(), threadCount);
-        int len = request.getProductId().size() / count;
-        List<Integer> productIds = request.getProductId();
         TimeIntervalEnum timeInterval = TimeIntervalEnum.convert(request.getTimeInterval());
         SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
         CyclicBarrier cyclicBarrierStart = new CyclicBarrier(threadCount, () -> {
@@ -188,7 +196,7 @@ public class ShangLaiController {
             if (end > productIds.size()) {
                 end = productIds.size();
             }
-            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, true);
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, true, request.getName());
         }
 
         return BaseResponse.success();
@@ -202,13 +210,14 @@ public class ShangLaiController {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd");
         String date = simpleDateFormat.format(new Date());
         String key = date + "~~" + timeIntervalType.getCode();
-        if (maps.containsKey(key) && (retry == null || !retry)) {
+
+
+        boolean fromCache = maps.containsKey(key) && (retry == null || !retry);
+        if (fromCache) {
             return BaseResponse.success(maps.get(key));
         }
 
         TimeIntervalEnum timeIntervalEnum = TimeIntervalEnum.convert(timeInterval);
-        //String body = String.format("{\"tid\":%s,\"pageNo\":0,\"token\":\"%s\",\"pagesize\":100,\"visit\":\"1b\"}", timeIntervalEnum.getTid(), token);
-        //tid=
         String body = String.format("tid=%s&pageNo=1&pageSize=10&visit=lb&token=%s", timeIntervalEnum.getTid(), token);
         String url = "http://pm.shanglai.art/index/fg/goods/goodsKillList";
         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
@@ -236,7 +245,7 @@ public class ShangLaiController {
                     .build();
             s = HttpClientUtil.requestV2(requestEntity, new TypeReference<ShangLaiBaseResponse<QueryListPageResponse>>() {
             });
-            if (s==null || CollectionUtils.isEmpty(list) || CollectionUtils.isEmpty(s.getResult().getGoodsList())) {
+            if (s == null || CollectionUtils.isEmpty(list) || CollectionUtils.isEmpty(s.getResult().getGoodsList())) {
                 break;
             }
             list.addAll(s.getResult().getGoodsList());
@@ -247,36 +256,39 @@ public class ShangLaiController {
     }
 
     private void splitStart(List<Integer> productIds, String token, TimeIntervalEnum timeInterval,
-                            boolean isVip) {
+                            boolean isVip, String userName) {
         SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
         ThreadPoolUtil.execute(() -> {
-            if (timeInterval != null) {
-                try {
-                    Date startTime = isVip ? timeInterval.getVipStartTime() : timeInterval.getStartTime();
+            try {
+                Date startTime = isVip ? timeInterval.getVipStartTime() : timeInterval.getStartTime();
 
-                    Date now = new Date();
-                    long startSecond = startTime.getTime();
-                    if (now.before(startTime)) {
-                        long nowSecond = now.getTime();
-                        System.out.println(simpleFormat.format(now) + ",已预约时间段：" + simpleFormat.format(startTime) + "," + (startSecond - nowSecond) + "毫秒后开始运行");
-                        Thread.sleep(startSecond - nowSecond);
-                    }
-
-                } catch (Exception ignored) {
-
-
+                Date now = new Date();
+                long startSecond = startTime.getTime();
+                if (now.before(startTime)) {
+                    long nowSecond = now.getTime();
+                    System.out.println(simpleFormat.format(now) + ",已预约时间段：" + simpleFormat.format(startTime) + "," + (startSecond - nowSecond) + "毫秒后开始运行(" + userName + ")");
+                    Thread.sleep(startSecond - nowSecond);
                 }
+            } catch (Exception ignored) {
+
             }
             System.out.println("抢购开始" + simpleFormat.format(new Date()));
             Thread.currentThread().setName("thread-商品-[" + StringUtils.join(productIds, ",") + "]");
             AtomicBoolean hasProduct = new AtomicBoolean(false);
-            for (int i = 0; i < 150; i++) {
+            AtomicBoolean killFail = new AtomicBoolean(false);
+            for (int i = 0; i < count; i++) {
                 productIds.forEach(productId -> {
                     if (hasProduct.get()) {
                         System.out.println("已拍到产品，无需重拍");
                         return;
                     }
-                    String body = String.format("ag_id=%s&token=%s&visit=%s&tid=%s", productId, token, timeInterval.getVisit(), timeInterval.getTid());
+                    if (killFail.get()) {
+                        System.out.println("已被其它用户拍走了");
+                        return;
+                    }
+                    String body = String.format("ag_id=%s&token=%s&visit=%s&tid=%s", productId, token
+                            , timeInterval.getVisit()
+                            , timeInterval.getTid());
                     try {
                         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                                 .body(body)
@@ -289,7 +301,10 @@ public class ShangLaiController {
                         if (StringUtils.isNotBlank(s)) {
                             if (s.contains("成功")) {
                                 hasProduct.set(true);
-                                System.out.println("thread-商品-" + productId + "抢购成功了");
+                                System.out.println("thread-商品-" + productId + "抢购成功了(" + userName + ")");
+                            } else if (s.contains("商品已其他用户被拍下")) {
+                                killFail.set(true);
+                                System.out.println(simpleFormat.format(new Date()) + "-"+productId + "被其它人抢走了");
                             } else {
                                 System.out.println(simpleFormat.format(new Date()) + " " + s);
                             }
@@ -302,6 +317,9 @@ public class ShangLaiController {
                     System.out.println(Thread.currentThread().getName() + "正在抢拍，不要着急," + i);
                 }
                 if (hasProduct.get()) {
+                    break;
+                }
+                if (killFail.get()) {
                     break;
                 }
             }
