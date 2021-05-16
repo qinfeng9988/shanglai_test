@@ -14,6 +14,7 @@ public class ShangLaiBaseResponse<T> {
     private String message;
     private T result;
     private T list;
+    private T info;
     private Integer count;
 
 }

@@ -34,4 +34,8 @@ public class BaseResponse<T> implements Serializable {
         return new BaseResponse<T>(0, "ok", data, null);
     }
 
+    public static <T> BaseResponse<T> executing() {
+        return new BaseResponse<T>(1, "执行中，请稍候", null, null);
+    }
+
 }
