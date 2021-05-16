@@ -42,6 +42,8 @@ public class ShangLaiController {
 
     private Date lastUpdateTime = new Date();
 
+    private String requestHost = "http://ss.shanglai.art";
+
     /**
      * 并行抢拍
      *
@@ -93,14 +95,14 @@ public class ShangLaiController {
                         RestTemplate restTemplate = new RestTemplate();
                         HttpHeaders header = new HttpHeaders();
                         header.setContentType(MediaType.APPLICATION_JSON);
-                        header.setOrigin("http://pm.shanglai.art");
-                        header.add("Referer", "http://pm.shanglai.art/vue/");
+                        header.setOrigin(requestHost);
+                        header.add("Referer", requestHost + "/vue/");
                         header.setAccept(Lists.newArrayList(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, MediaType.ALL));
                         header.add("User-Agent", "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.190 Mobile Safari/537.36");
                         HttpEntity<String> httpEntity = new HttpEntity<>(body, header);
 
                         try {
-                            String s = restTemplate.postForObject("http://pm.shanglai.art/index/auction_goods/buy_auction_goods", httpEntity, String.class);
+                            String s = restTemplate.postForObject(requestHost + "/index/auction_goods/buy_auction_goods", httpEntity, String.class);
                             if (StringUtils.isNotBlank(s)) {
                                 if (s.contains("成功")) {
                                     hasProduct.set(true);
@@ -223,11 +225,11 @@ public class ShangLaiController {
         paramMaps.put("tid", String.valueOf(timeIntervalEnum.getTid()));
         String body = StringHelper.parameterJoin(paramMaps);
 
-        String url = "http://pm.shanglai.art/index/fg/goods/goodsKillList";
+        String url = requestHost + "/index/fg/goods/goodsKillList";
         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                 .body(body)
-                .origin("http://pm.shanglai.art")
-                .referer("http://pm.shanglai.art/vue/")
+                .origin(requestHost)
+                .referer(requestHost + "/vue/")
                 .url(url)
                 .build();
         ShangLaiBaseResponse<QueryListPageResponse> s = HttpClientUtil.requestV2(requestEntity, new TypeReference<ShangLaiBaseResponse<QueryListPageResponse>>() {
@@ -254,8 +256,8 @@ public class ShangLaiController {
                 String requestBody = StringHelper.parameterJoin(paramMaps);
                 HttpRequestEntity request = HttpRequestEntity.builder()
                         .body(requestBody)
-                        .origin("http://pm.shanglai.art")
-                        .referer("http://pm.shanglai.art/vue/")
+                        .origin(requestHost)
+                        .referer(requestHost + "/vue/")
                         .url(url)
                         .build();
                 ShangLaiBaseResponse<QueryListPageResponse> r = HttpClientUtil.requestV2(request, new TypeReference<ShangLaiBaseResponse<QueryListPageResponse>>() {
@@ -307,11 +309,11 @@ public class ShangLaiController {
         while (maxId > (maxId - 10000)) {
             String body = String.format(template, maxId, token);
 
-            String url = "http://pm.shanglai.art/index/auction_goods/audit_payment_page";
+            String url = requestHost + "/index/auction_goods/audit_payment_page";
             HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                     .body(body)
-                    .origin("http://pm.shanglai.art")
-                    .referer("http://pm.shanglai.art/vue/")
+                    .origin(requestHost)
+                    .referer(requestHost + "/vue/")
                     .url(url)
                     .mediaType(MediaType.APPLICATION_JSON_UTF8_VALUE)
                     .build();
@@ -322,7 +324,7 @@ public class ShangLaiController {
             }
             maxId--;
             OrderDetailResponse orderDetailResponse = s.getInfo();
-            if (orderDetailResponse == null || orderDetailResponse.getPay_time() == null){
+            if (orderDetailResponse == null || orderDetailResponse.getPay_time() == null) {
                 continue;
             }
             if (orderDetailResponse.getCreate_time().after(endTime)) {
@@ -411,9 +413,9 @@ public class ShangLaiController {
                     try {
                         HttpRequestEntity requestEntity = HttpRequestEntity.builder()
                                 .body(body)
-                                .origin("http://pm.shanglai.art")
-                                .referer("http://pm.shanglai.art/vue/")
-                                .url("http://pm.shanglai.art/index/fg/goods/goodsKillOrder")
+                                .origin(requestHost)
+                                .referer(requestHost + "/vue/")
+                                .url(requestHost + "/index/fg/goods/goodsKillOrder")
                                 .build();
                         String s = HttpClientUtil.requestV2(requestEntity, new TypeReference<String>() {
                         });

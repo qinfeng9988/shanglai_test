@@ -52,7 +52,7 @@ public class HttpClientUtil {
                 .addHeader("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.5(0x18000527) NetType/WIFI Language/zh_CN")
                 .addHeader("Content-type", requestEntity.getMediaType())
                 .addHeader("Origin", requestEntity.getOrigin())
-                .addHeader("Host", "pm.shanglai.art")
+                .addHeader("Host", "ss.shanglai.art")
                 .addHeader("Cookie", "aliyungf_tc=8ae8aead8f23dd2758c91b45598b7355a9021b00bb050e35d704bf440fec5286;")
                 .addHeader("Referer", requestEntity.getReferer())
                 .addHeader("Accept", MediaType.ALL_VALUE)

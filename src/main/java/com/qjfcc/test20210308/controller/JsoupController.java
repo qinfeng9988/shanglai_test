@@ -24,7 +24,7 @@ public class JsoupController {
     @GetMapping("query")
     public BaseResponse<Boolean> queryContent() throws IOException {
 
-        crawTextService.getText(true, true, "http://pm.shanglai.art/index/auction_goods/auction_goods_list");
+        crawTextService.getText(true, true, "http://ss.shanglai.art/index/auction_goods/auction_goods_list");
 
 //        crawTextService.getProduct(Lists.newArrayList(80, 79, 793, 1082));
 

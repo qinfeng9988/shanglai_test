@@ -87,8 +87,8 @@ public class CrawTextService {
                     header.setContentType(MediaType.APPLICATION_JSON);
                     HttpEntity<String> httpEntity = new HttpEntity<>(body, header);
 
-//        restTemplate.postForLocation("http://pm.shanglai.art/index/auction_goods/buy_auction_goods", "{\"id\":409,\"token\":\"d895276fa5de58de0da1cf6d1eb05f67\"}");
-                    String s = restTemplate.postForObject("http://pm.shanglai.art/index/auction_goods/buy_auction_goods", httpEntity, String.class);
+//        restTemplate.postForLocation("http://ss.shanglai.art/index/auction_goods/buy_auction_goods", "{\"id\":409,\"token\":\"d895276fa5de58de0da1cf6d1eb05f67\"}");
+                    String s = restTemplate.postForObject("http://ss.shanglai.art/index/auction_goods/buy_auction_goods", httpEntity, String.class);
                     System.out.println(s);
                 }
 
