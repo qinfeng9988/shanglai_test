@@ -241,7 +241,7 @@ public class ShangLaiController {
         }
         ThreadPoolUtil.execute(() -> {
             List<GoodInfoResponse> list = queryListPageResponse.getGoodsList();
-            for (int i = 2; i < s.getResult().getPageController().getTotalPages(); i++) {
+            for (int i = 2; i <= s.getResult().getPageController().getTotalPages(); i++) {
 //                try {
 //                    Thread.sleep(NumberUtil.random(1000, 3000));
 //                } catch (InterruptedException e) {
