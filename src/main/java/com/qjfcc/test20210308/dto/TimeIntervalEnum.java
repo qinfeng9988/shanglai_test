@@ -1,15 +1,17 @@
 package com.qjfcc.test20210308.dto;
 
+import com.qjfcc.test20210308.common.DateTimeUtil;
+import org.joda.time.LocalDate;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import  org.joda.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 
 public enum TimeIntervalEnum {
-    MORNING(1, "早上", 1, "10:29:57", "10:19:30","lb"),
-    AFTERNOON(2, "中午", 2, "14:29:57", "14:19:30","lb"),
-    EVENING(3, "晚上", 18, "18:29:57", "18:19:30","qg"),
+    MORNING(1, "早上", 1, "10:30:00", "10:19:30", "lb"),
+    AFTERNOON(2, "中午", 2, "14:30:00", "14:19:30", "lb"),
+    EVENING(3, "晚上", 18, "18:30:00", "18:19:30", "qg"),
     ;
     private Integer code;
     private String message;
@@ -23,8 +25,7 @@ public enum TimeIntervalEnum {
 
     private String visit;
 
-    TimeIntervalEnum(Integer code, String message, Integer tid, String time, String vipTime,String visit)
-    {
+    TimeIntervalEnum(Integer code, String message, Integer tid, String time, String vipTime, String visit) {
         this.code = code;
         this.message = message;
         this.tid = tid;
@@ -46,20 +47,25 @@ public enum TimeIntervalEnum {
     }
 
     public Date getStartTime() {
-        return getTime(false,LocalDate.now());
+        return getTime(false, LocalDate.now());
     }
 
     public Date getVipStartTime(LocalDate date) {
-        if(date == null ){
+        if (date == null) {
             date = LocalDate.now();
         }
-        return getTime(true,date);
+        return getTime(true, date);
     }
 
-    private Date getTime(boolean isVip,LocalDate date) {
+    public Date getStartTime(Integer seconds) {
+        Date normalTime = getTime(false,LocalDate.now());
+        return DateTimeUtil.addSeconds(normalTime, seconds);
+    }
+
+    private Date getTime(boolean isVip, LocalDate date) {
         SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
         try {
-            String dateString = date.year().getAsString() + "-" + date.monthOfYear().getAsString() + "-" +date.getDayOfMonth()  + " ";
+            String dateString = date.year().getAsString() + "-" + date.monthOfYear().getAsString() + "-" + date.getDayOfMonth() + " ";
             dateString += isVip ? this.vipTime : this.time;
             return simpleFormat.parse(dateString);
         } catch (ParseException e) {

@@ -42,7 +42,7 @@ public class ShangLaiController {
 
     private Date lastUpdateTime = new Date();
 
-    private String requestHost = "http://ss.shanglai.art";
+    private String requestHost = "https://ss.shanglai.art";
 
     /**
      * 并行抢拍
@@ -142,7 +142,7 @@ public class ShangLaiController {
         int len = request.getProductId().size() / count;
         List<Integer> productIds = request.getProductId();
         TimeIntervalEnum timeInterval = TimeIntervalEnum.convert(request.getTimeInterval());
-
+        Integer limitSeconds = request.getLimitSeconds() == null ? -3 : request.getLimitSeconds();
         int end, start;
         for (int i = 0; i < count; i++) {
             start = i * len;
@@ -153,7 +153,7 @@ public class ShangLaiController {
             if (end > productIds.size()) {
                 end = productIds.size();
             }
-            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, false, request.getName());
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, limitSeconds, request.getName());
         }
 
         return BaseResponse.success();
@@ -174,7 +174,7 @@ public class ShangLaiController {
         int len = request.getProductId().size() / count;
         List<Integer> productIds = request.getProductId();
         TimeIntervalEnum timeInterval = TimeIntervalEnum.convert(request.getTimeInterval());
-
+        Integer limitSeconds = request.getLimitSeconds() == null ? -1830 : request.getLimitSeconds();
         int end, start;
         for (int i = 0; i < count; i++) {
             start = i * len;
@@ -185,7 +185,8 @@ public class ShangLaiController {
             if (end > productIds.size()) {
                 end = productIds.size();
             }
-            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, true, request.getName());
+
+            splitStart(productIds.subList(start, end), request.getToken(), timeInterval, limitSeconds, request.getName());
         }
 
         return BaseResponse.success();
@@ -290,7 +291,7 @@ public class ShangLaiController {
         DateTime dateTime = new DateTime(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
 
         Date startTime = timeIntervalType.getVipStartTime(dateTime.toLocalDate());
-        Date endTime = new DateTime(startTime).plusSeconds(6000).toDate();
+        Date endTime = new DateTime(startTime).plusSeconds(-900).plusSeconds(6000).toDate();
 
         String dateString = simpleDateFormat.format(date1);
 
@@ -373,11 +374,11 @@ public class ShangLaiController {
 
 
     private void splitStart(List<Integer> productIds, String token, TimeIntervalEnum timeInterval,
-                            boolean isVip, String userName) {
+                            Integer limitSeconds, String userName) {
         SimpleDateFormat simpleFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
         ThreadPoolUtil.execute(() -> {
             try {
-                Date startTime = isVip ? timeInterval.getVipStartTime(DateTime.now().toLocalDate()) : timeInterval.getStartTime();
+                Date startTime = timeInterval.getStartTime(limitSeconds);
 
                 Date now = new Date();
                 long startSecond = startTime.getTime();
